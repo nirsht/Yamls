@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: example-proj
+  namespace: argocd
+  # Finalizer that ensures that project is not deleted until it is not referenced by any application
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: This is nir example project
+  sourceRepos:
+  - 'https://github.com/nirsht/Yamls'
+
+  destinations:
+  - namespace: my-app
+    server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+
+  # Allow all namespaced-scoped resources to be created, except for ResourceQuota, LimitRange, NetworkPolicy
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange
+  - group: ''
+    kind: NetworkPolicy
+
+  # Deny all namespaced-scoped resources from being created, except for Deployment and StatefulSet
+  namespaceResourceWhitelist:
+  - group: 'apps'
+    kind: Deployment
+  - group: 'apps'
+    kind: StatefulSet
+
+  # Enables namespace orphaned resource monitoring.
+  orphanedResources:
+    warn: false
+
+  # Sync windows restrict when Applications may be synced. https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/
+  syncWindows:
+  - kind: allow
+    schedule: '10 1 * * *'
+    duration: 2m
+    applications:
+      - '*-prod'
+    manualSync: true
+  - kind: deny
+    schedule: '0 22 * * *'
+    duration: 2m
+    namespaces:
+      - default
+  - kind: allow
+    schedule: '0 23 * * *'
+    duration: 2m
+    clusters:
+      - in-cluster
